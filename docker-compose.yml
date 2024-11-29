@@ -11,6 +11,9 @@ services:
       - '8080:8080'
     networks:
       - 'local-network'
+    depends_on:
+      mysqldb:
+        condition: service_healthy # Ensures app starts only after MySQL is ready
 
   mysqldb:
     image: mysql:8.0.28-oracle
@@ -28,6 +31,11 @@ services:
     volumes:
       - case-mysql-data:/var/lib/case-mysqldb
       - ./mysql-db-dump.sql:/docker-entrypoint-initdb.d/mysql-db-dump.sql:ro
+    healthcheck: # Add a health check for MySQL
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   case-mysql-data:

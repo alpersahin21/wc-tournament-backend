@@ -1,6 +1,6 @@
-CREATE TABLE if not exists example_table (
-    id INT PRIMARY KEY,
-    name VARCHAR(255)
+CREATE TABLE IF NOT EXISTS user (
+                      id CHAR(36) NOT NULL PRIMARY KEY,
+                      level INT NOT NULL,
+                      coins INT NOT NULL,
+                      country VARCHAR(255) NOT NULL
 );
-
-INSERT INTO `example_table` (`id`, `name`) VALUES (1, 'example-1'), (2, 'example-2');
