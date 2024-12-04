@@ -8,5 +8,5 @@ import java.util.Optional;
 public interface TournamentRepository extends JpaRepository<Tournament, String> {
 
     // Find the currently active tournament
-    Optional<Tournament> findByIsActiveTrue();
+    Optional<Tournament> findByActiveTrue();
 }

@@ -46,11 +46,4 @@ public class UserServiceImpl implements UserService {
         return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
-    @Override
-    public User claimTournamentRewards(String userId) {
-        log.info("UserService -> claimTournamentRewards started: userId={}", userId);
-        User user = retrieveUserById(userId);
-        return null;
-    }
-
 }

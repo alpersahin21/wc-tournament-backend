@@ -1,19 +1,23 @@
 package com.dreamgames.backendengineeringcasestudy.service;
 
-import com.dreamgames.backendengineeringcasestudy.entity.Tournament;
-import com.dreamgames.backendengineeringcasestudy.entity.TournamentGroup;
+import com.dreamgames.backendengineeringcasestudy.model.response.CountryLeaderboardResponse;
+import com.dreamgames.backendengineeringcasestudy.model.response.GroupLeaderboardResponse;
+import com.dreamgames.backendengineeringcasestudy.model.response.GroupRankResponse;
+import com.dreamgames.backendengineeringcasestudy.model.response.UserResponse;
 
 public interface TournamentService {
 
-    Tournament getCurrentTournament();
+    void createNewTournament();
 
-    TournamentGroup addUserToTournamentGroup(String userId, String tournamentGroupId);
+    GroupLeaderboardResponse addUserToTournament(String userId);
 
-    TournamentGroup getTournamentGroupRankByUserId(String tournamentGroupId);
+    UserResponse handleClaimReward(String userId);
 
-    TournamentGroup getTournamentGroupLeaderboard(String tournamentGroupId);
+    GroupRankResponse getUserGroupRank(String userId);
 
-    TournamentGroup getCountryTournamentRank(String tournamentGroupId, String country);
+    GroupLeaderboardResponse getGroupLeaderboard(String tournamentGroupId);
+
+    CountryLeaderboardResponse getCountryLeaderboard();
 
 
 

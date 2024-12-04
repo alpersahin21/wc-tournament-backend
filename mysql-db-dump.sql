@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS tournament (
                                           id CHAR(36) NOT NULL PRIMARY KEY,
                                           start_time DATETIME NOT NULL,
                                           end_time DATETIME NOT NULL,
-                                          is_active BOOLEAN NOT NULL
+                                          active BOOLEAN NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS tournament_group (

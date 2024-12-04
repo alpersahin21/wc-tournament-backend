@@ -21,7 +21,7 @@ public class Tournament {
 
     private LocalDateTime endTime;
 
-    private boolean isActive;
+    private boolean active;
 
     @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TournamentGroup> tournamentGroups;

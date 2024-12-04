@@ -1,10 +1,16 @@
 package com.dreamgames.backendengineeringcasestudy.service.impl;
 
 import com.dreamgames.backendengineeringcasestudy.entity.Tournament;
-import com.dreamgames.backendengineeringcasestudy.entity.TournamentGroup;
 import com.dreamgames.backendengineeringcasestudy.exception.ApiBusinessException;
+import com.dreamgames.backendengineeringcasestudy.model.response.CountryLeaderboardResponse;
+import com.dreamgames.backendengineeringcasestudy.model.response.GroupLeaderboardResponse;
+import com.dreamgames.backendengineeringcasestudy.model.response.GroupRankResponse;
+import com.dreamgames.backendengineeringcasestudy.model.response.UserResponse;
+import com.dreamgames.backendengineeringcasestudy.repository.TournamentGroupRepository;
+import com.dreamgames.backendengineeringcasestudy.repository.TournamentParticipationRepository;
 import com.dreamgames.backendengineeringcasestudy.repository.TournamentRepository;
 import com.dreamgames.backendengineeringcasestudy.service.TournamentService;
+import com.dreamgames.backendengineeringcasestudy.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,37 +26,16 @@ import java.time.LocalDateTime;
 public class TournamentServiceImpl implements TournamentService {
 
     private final TournamentRepository tournamentRepository;
-
-    @Override
-    public Tournament getCurrentTournament() {
-        return tournamentRepository.findByIsActiveTrue().orElseThrow(() -> new ApiBusinessException("No active tournament found"));
-    }
-
-    @Override
-    public TournamentGroup addUserToTournamentGroup(String userId, String tournamentGroupId) {
-        return null;
-    }
-
-    @Override
-    public TournamentGroup getTournamentGroupRankByUserId(String tournamentGroupId) {
-        return null;
-    }
-
-    @Override
-    public TournamentGroup getTournamentGroupLeaderboard(String tournamentGroupId) {
-        return null;
-    }
-
-    @Override
-    public TournamentGroup getCountryTournamentRank(String tournamentGroupId, String country) {
-        return null;
-    }
+    private final TournamentGroupRepository tournamentGroupRepository;
+    private final TournamentParticipationRepository tournamentParticipationRepository;
+    private final UserService userService;
 
     /**
      * Automatically creates a new tournament daily at 00:00 UTC
      */
     @Scheduled(cron = "0 0 0 * * ?", zone = "UTC")
     @Transactional
+    @Override
     public void createNewTournament() {
         // Mark the previous tournament as inactive
         deactivatePreviousTournament();
@@ -65,13 +50,44 @@ public class TournamentServiceImpl implements TournamentService {
         tournamentRepository.save(newTournament);
     }
 
+    @Override
+    public GroupLeaderboardResponse addUserToTournament(String userId) {
+        return null;
+    }
+
+    @Override
+    public UserResponse handleClaimReward(String userId) {
+        return null;
+    }
+
+    @Override
+    public GroupRankResponse getUserGroupRank(String userId) {
+        return null;
+    }
+
+    @Override
+    public GroupLeaderboardResponse getGroupLeaderboard(String tournamentGroupId) {
+        return null;
+    }
+
+    @Override
+    public CountryLeaderboardResponse getCountryLeaderboard() {
+        return null;
+    }
+
     /**
      * Deactivates the currently active tournament.
      */
-    public void deactivatePreviousTournament() {
+    private void deactivatePreviousTournament() {
         // Find the active tournament
         Tournament activeTournament = getCurrentTournament();
         activeTournament.setActive(false);
         tournamentRepository.save(activeTournament);
     }
+
+    private Tournament getCurrentTournament() {
+        return tournamentRepository.findByActiveTrue().orElseThrow(() -> new ApiBusinessException("No active tournament found"));
+    }
+
+
 }

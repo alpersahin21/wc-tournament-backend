@@ -27,9 +27,4 @@ public class UserController {
         return UserResponse.fromModel(user);
     }
 
-    @PostMapping("/claim/{id}")
-    public UserResponse claimTournamentRewards(@PathVariable("id") String userId) {
-        User user = userService.claimTournamentRewards(userId);
-        return UserResponse.fromModel(user);
-    }
 }
