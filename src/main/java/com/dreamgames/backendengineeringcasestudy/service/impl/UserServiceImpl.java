@@ -1,9 +1,11 @@
-package com.dreamgames.backendengineeringcasestudy.service;
+package com.dreamgames.backendengineeringcasestudy.service.impl;
 
 import com.dreamgames.backendengineeringcasestudy.entity.User;
 import com.dreamgames.backendengineeringcasestudy.exception.ApiBusinessException;
 import com.dreamgames.backendengineeringcasestudy.mapper.UserMapper;
+import com.dreamgames.backendengineeringcasestudy.model.request.CreateUserRequest;
 import com.dreamgames.backendengineeringcasestudy.repository.UserRepository;
+import com.dreamgames.backendengineeringcasestudy.service.UserService;
 import com.dreamgames.backendengineeringcasestudy.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,10 +19,10 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
     @Override
-    public User createUser() {
+    public User createUser(CreateUserRequest requestDTO) {
         log.info("UserService -> createUser started");
         User user = new User();
-        UserMapper.fillUserData(user);
+        UserMapper.dtoToUser(user, requestDTO);
         User savedEntity = userRepository.save(user);
         log.info("UserService -> createUser completed!");
         return savedEntity;
@@ -40,7 +42,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public User retrieveUserById(String id) {
         log.info("UserService -> retrieveUserById started: userId={}", id);
-        if (StringUtils.isEmpty(id)) throw new ApiBusinessException("userId is a required field.");
+        if (Boolean.TRUE.equals(StringUtils.isEmpty(id))) throw new ApiBusinessException("userId is a required field.");
         return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
+
+    @Override
+    public User claimTournamentRewards(String userId) {
+        log.info("UserService -> claimTournamentRewards started: userId={}", userId);
+        User user = retrieveUserById(userId);
+        return null;
+    }
+
 }

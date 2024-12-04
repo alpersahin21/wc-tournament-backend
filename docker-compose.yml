@@ -32,9 +32,9 @@ services:
       - case-mysql-data:/var/lib/case-mysqldb
       - ./mysql-db-dump.sql:/docker-entrypoint-initdb.d/mysql-db-dump.sql:ro
     healthcheck: # Add a health check for MySQL
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "mysqldb", "-uuser", "-ppassword"]
+      interval: 5s
+      timeout: 2s
       retries: 5
 
 volumes:

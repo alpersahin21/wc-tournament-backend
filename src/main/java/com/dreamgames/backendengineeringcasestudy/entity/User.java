@@ -1,28 +1,31 @@
 package com.dreamgames.backendengineeringcasestudy.entity;
 
 import com.dreamgames.backendengineeringcasestudy.model.enums.Country;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.validation.annotation.Validated;
+
+import java.util.List;
 
 @Getter
 @Setter
-@Entity(name = "user")
-@Validated
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
+@Entity
+@Table(name = "user")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    private Integer level;
+    private String username;
 
-    private Integer coins;
+    private int level;
+
+    private int coins;
 
     @Enumerated(EnumType.STRING)
     private Country country;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TournamentParticipation> tournamentParticipation;
 }
