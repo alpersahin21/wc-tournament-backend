@@ -96,6 +96,7 @@ class TournamentServiceImplTest {
     @Test
     void testAddUserToTournament_UserNotEligible() {
         // Arrange
+        user.getTournamentParticipation().clear();
         user.setLevel(10); // User below required level
         when(userRepository.findById("user123")).thenReturn(Optional.of(user));
 
