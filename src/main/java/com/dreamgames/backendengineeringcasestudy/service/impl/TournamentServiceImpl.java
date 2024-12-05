@@ -51,6 +51,11 @@ public class TournamentServiceImpl implements TournamentService {
     }
 
     private void validateUserEligibility(User user) {
+
+        if (Objects.nonNull(getActiveParticipation(user))) {
+            throw new ApiBusinessException("User is already participating in the tournament.");
+        }
+
         if (user.getLevel() < 20) {
             throw new ApiBusinessException("User does not meet the level requirement to participate in the tournament.");
         }
@@ -103,9 +108,11 @@ public class TournamentServiceImpl implements TournamentService {
         log.info("Handling reward claim for user: userId={}", userId);
         User user = retrieveUserById(userId);
         TournamentParticipation participation = getActiveParticipation(user);
+
         if (Objects.isNull(participation)) {
             throw new ApiBusinessException("User has no active participation in the tournament.");
         }
+
         if (Boolean.TRUE.equals(participation.getTournamentGroup().getTournament().getActive()))
             throw new ApiBusinessException("Tournament is still active.");
 
