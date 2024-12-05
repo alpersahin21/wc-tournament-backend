@@ -19,9 +19,9 @@ public class User {
 
     private String username;
 
-    private int level;
+    private Integer level;
 
-    private int coins;
+    private Integer coins;
 
     @Enumerated(EnumType.STRING)
     private Country country;

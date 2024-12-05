@@ -5,6 +5,7 @@ import com.dreamgames.backendengineeringcasestudy.exception.ApiBusinessException
 import com.dreamgames.backendengineeringcasestudy.mapper.UserMapper;
 import com.dreamgames.backendengineeringcasestudy.model.request.CreateUserRequest;
 import com.dreamgames.backendengineeringcasestudy.repository.UserRepository;
+import com.dreamgames.backendengineeringcasestudy.service.TournamentService;
 import com.dreamgames.backendengineeringcasestudy.service.UserService;
 import com.dreamgames.backendengineeringcasestudy.util.StringUtils;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final TournamentService tournamentService;
 
     @Override
     public User createUser(CreateUserRequest requestDTO) {
@@ -34,6 +36,7 @@ public class UserServiceImpl implements UserService {
         User user = retrieveUserById(id);
         user.setLevel(user.getLevel() + 1);
         user.setCoins(user.getCoins() + 25);
+        tournamentService.updateUserScore(user);
         User savedEntity = userRepository.save(user);
         log.info("UserService -> updateLevel completed!");
         return savedEntity;
@@ -44,6 +47,15 @@ public class UserServiceImpl implements UserService {
         log.info("UserService -> retrieveUserById started: userId={}", id);
         if (Boolean.TRUE.equals(StringUtils.isEmpty(id))) throw new ApiBusinessException("userId is a required field.");
         return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+    }
+
+    @Override
+    public User updateUserData(User user, Integer userRank) {
+        if (userRank == 1)
+            user.setCoins(user.getCoins() + 10000);
+        else if (userRank == 2)
+            user.setCoins(user.getCoins() + 5000);
+        return userRepository.save(user);
     }
 
 }

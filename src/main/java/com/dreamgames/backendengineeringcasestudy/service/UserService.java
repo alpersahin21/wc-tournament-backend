@@ -10,4 +10,6 @@ public interface UserService {
     User updateLevel(String id);
 
     User retrieveUserById(String id);
+
+    User updateUserData(User user, Integer userRank);
 }

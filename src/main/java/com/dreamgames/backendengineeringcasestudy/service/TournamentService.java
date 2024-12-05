@@ -1,5 +1,6 @@
 package com.dreamgames.backendengineeringcasestudy.service;
 
+import com.dreamgames.backendengineeringcasestudy.entity.User;
 import com.dreamgames.backendengineeringcasestudy.model.response.CountryLeaderboardResponse;
 import com.dreamgames.backendengineeringcasestudy.model.response.GroupLeaderboardResponse;
 import com.dreamgames.backendengineeringcasestudy.model.response.GroupRankResponse;
@@ -19,7 +20,5 @@ public interface TournamentService {
 
     CountryLeaderboardResponse getCountryLeaderboard();
 
-
-
-
+    void updateUserScore(User user);
 }

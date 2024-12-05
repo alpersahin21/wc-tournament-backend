@@ -16,6 +16,8 @@ public class TournamentGroup {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    private Boolean competing;
+
     @OneToMany(mappedBy = "tournamentGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TournamentParticipation> participantUsers;
 

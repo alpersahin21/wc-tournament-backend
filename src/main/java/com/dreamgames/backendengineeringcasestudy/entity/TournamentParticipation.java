@@ -22,18 +22,8 @@ public class TournamentParticipation {
     @JoinColumn(name = "tournament_group_id", foreignKey = @ForeignKey(name = "fk_tournament_participation_tournament_group"))
     private TournamentGroup tournamentGroup;
 
-    private int score;
+    private Integer score;
 
-    private boolean isRewardClaimed;
-
-
-
-
-
-
-
-
-
-
+    private Boolean rewardClaimed;
 
 }
