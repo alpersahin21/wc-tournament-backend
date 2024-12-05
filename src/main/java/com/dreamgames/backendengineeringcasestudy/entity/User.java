@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -27,5 +28,5 @@ public class User {
     private Country country;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TournamentParticipation> tournamentParticipation;
+    private List<TournamentParticipation> tournamentParticipation = new ArrayList<>();
 }

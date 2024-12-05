@@ -25,10 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 @Service
@@ -78,10 +75,10 @@ public class TournamentServiceImpl implements TournamentService {
         TournamentParticipation participation = createParticipation(user, group);
         group.getParticipantUsers().add(participation);
         user.getTournamentParticipation().add(participation);
-
         if (group.getParticipantUsers().size() == 5) {
             group.setCompeting(true);
         }
+        tournamentParticipationRepository.save(participation);
         return tournamentGroupRepository.save(group);
     }
 
@@ -95,9 +92,9 @@ public class TournamentServiceImpl implements TournamentService {
     private TournamentGroup createNewTournamentGroup(User user, Tournament tournament) {
         TournamentGroup group = new TournamentGroup();
         group.setTournament(tournament);
-        group.setParticipantUsers(new ArrayList<>());
+        group.setCompeting(false);
         tournament.getTournamentGroups().add(group);
-
+        tournamentRepository.save(tournament);
         return addUserToGroup(user, group);
     }
 
@@ -106,6 +103,11 @@ public class TournamentServiceImpl implements TournamentService {
         log.info("Handling reward claim for user: userId={}", userId);
         User user = retrieveUserById(userId);
         TournamentParticipation participation = getActiveParticipation(user);
+        if (Objects.isNull(participation)) {
+            throw new ApiBusinessException("User has no active participation in the tournament.");
+        }
+        if (Boolean.TRUE.equals(participation.getTournamentGroup().getTournament().getActive()))
+            throw new ApiBusinessException("Tournament is still active.");
 
         participation.setRewardClaimed(true);
         Integer userRank = calculateUserRank(participation);
@@ -124,7 +126,9 @@ public class TournamentServiceImpl implements TournamentService {
         log.info("Getting group rank for user: userId={}", userId);
         User user = retrieveUserById(userId);
         TournamentParticipation participation = getActiveParticipation(user);
-
+        if (Objects.isNull(participation)) {
+            throw new ApiBusinessException("User has no active participation in the tournament.");
+        }
         return generateGroupRankResponse(user, participation);
     }
 
@@ -175,7 +179,7 @@ public class TournamentServiceImpl implements TournamentService {
         log.info("Updating score for user: userId={}", user.getId());
         TournamentParticipation participation = getActiveParticipation(user);
 
-        if (Boolean.TRUE.equals(participation.getTournamentGroup().getCompeting())) {
+        if (!Objects.isNull(participation) && Boolean.TRUE.equals(participation.getTournamentGroup().getCompeting())) {
             participation.setScore(participation.getScore() + 1);
             tournamentParticipationRepository.save(participation);
         }
@@ -218,7 +222,7 @@ public class TournamentServiceImpl implements TournamentService {
         return user.getTournamentParticipation().stream()
                 .filter(part -> !part.getRewardClaimed())
                 .findFirst()
-                .orElseThrow(() -> new ApiBusinessException("User is not participating in any active tournament."));
+                .orElse(null);
     }
 
     private Integer calculateUserRank(TournamentParticipation participation) {
@@ -245,6 +249,8 @@ public class TournamentServiceImpl implements TournamentService {
         return GroupRankResponse.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
+                .country(user.getCountry())
+                .score(participation.getScore())
                 .rank(calculateUserRank(participation))
                 .build();
     }
@@ -258,4 +264,3 @@ public class TournamentServiceImpl implements TournamentService {
                 .orElseThrow(() -> new ApiBusinessException("User not found with ID: " + id));
     }
 }
-

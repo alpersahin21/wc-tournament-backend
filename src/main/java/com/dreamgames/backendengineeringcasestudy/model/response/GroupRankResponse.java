@@ -14,5 +14,7 @@ public class GroupRankResponse {
 
     private Country country;
 
+    private Integer score;
+
     private Integer rank;
 }
