@@ -13,6 +13,8 @@ public class UserResponse {
 
     private Integer level;
 
+    private String username;
+
     private Integer coins;
 
     private Country country;
@@ -21,6 +23,7 @@ public class UserResponse {
         return UserResponse.builder()
                 .id(user.getId())
                 .level(user.getLevel())
+                .username(user.getUsername())
                 .coins(user.getCoins())
                 .country(user.getCountry())
                 .build();

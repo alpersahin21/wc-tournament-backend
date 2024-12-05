@@ -44,17 +44,6 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ApiBusinessException("User not found with ID: " + id));
     }
 
-    @Override
-    public User updateUserData(User user, Integer userRank) {
-        int rewardCoins = switch (userRank) {
-            case 1 -> 10000;
-            case 2 -> 5000;
-            default -> 0;
-        };
-        user.setCoins(user.getCoins() + rewardCoins);
-        return userRepository.save(user);
-    }
-
     private void validateId(String id) {
         if (Boolean.TRUE.equals(StringUtils.isEmpty(id))) throw new ApiBusinessException("User ID is required.");
     }

@@ -11,5 +11,4 @@ public interface UserService {
 
     User retrieveUserById(String id);
 
-    User updateUserData(User user, Integer userRank);
 }

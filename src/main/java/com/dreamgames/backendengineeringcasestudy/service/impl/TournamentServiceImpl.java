@@ -14,8 +14,8 @@ import com.dreamgames.backendengineeringcasestudy.model.response.UserResponse;
 import com.dreamgames.backendengineeringcasestudy.repository.TournamentGroupRepository;
 import com.dreamgames.backendengineeringcasestudy.repository.TournamentParticipationRepository;
 import com.dreamgames.backendengineeringcasestudy.repository.TournamentRepository;
+import com.dreamgames.backendengineeringcasestudy.repository.UserRepository;
 import com.dreamgames.backendengineeringcasestudy.service.TournamentService;
-import com.dreamgames.backendengineeringcasestudy.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -39,13 +39,13 @@ public class TournamentServiceImpl implements TournamentService {
     private final TournamentRepository tournamentRepository;
     private final TournamentGroupRepository tournamentGroupRepository;
     private final TournamentParticipationRepository tournamentParticipationRepository;
-    private final UserService userService;
+    private final UserRepository userRepository;
 
     @Override
     public GroupLeaderboardResponse addUserToTournament(String userId) {
         log.info("Adding user to tournament: userId={}", userId);
         Tournament tournament = getCurrentTournamentOrCreateNew();
-        User user = userService.retrieveUserById(userId);
+        User user = retrieveUserById(userId);
 
         validateUserEligibility(user);
 
@@ -104,21 +104,25 @@ public class TournamentServiceImpl implements TournamentService {
     @Override
     public UserResponse handleClaimReward(String userId) {
         log.info("Handling reward claim for user: userId={}", userId);
-        User user = userService.retrieveUserById(userId);
+        User user = retrieveUserById(userId);
         TournamentParticipation participation = getActiveParticipation(user);
 
         participation.setRewardClaimed(true);
         Integer userRank = calculateUserRank(participation);
-        userService.updateUserData(user, userRank);
-        tournamentParticipationRepository.save(participation);
-
-        return UserResponse.fromModel(user);
+        int rewardCoins = switch (userRank) {
+            case 1 -> 10000;
+            case 2 -> 5000;
+            default -> 0;
+        };
+        user.setCoins(user.getCoins() + rewardCoins);
+        User savedEntity = userRepository.save(user);
+        return UserResponse.fromModel(savedEntity);
     }
 
     @Override
     public GroupRankResponse getUserGroupRank(String userId) {
         log.info("Getting group rank for user: userId={}", userId);
-        User user = userService.retrieveUserById(userId);
+        User user = retrieveUserById(userId);
         TournamentParticipation participation = getActiveParticipation(user);
 
         return generateGroupRankResponse(user, participation);
@@ -247,6 +251,11 @@ public class TournamentServiceImpl implements TournamentService {
 
     private LocalDateTime getTodayAt20UTC() {
         return LocalDate.now().atTime(20, 0).atZone(ZoneId.of("UTC")).toLocalDateTime();
+    }
+
+    private User retrieveUserById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ApiBusinessException("User not found with ID: " + id));
     }
 }
 
