@@ -14,6 +14,9 @@ public class TournamentParticipation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    private Integer score;
+
+    private Boolean rewardClaimed;
     @ManyToOne
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_tournament_participation_user"))
     private User user;
@@ -21,9 +24,5 @@ public class TournamentParticipation {
     @ManyToOne
     @JoinColumn(name = "tournament_group_id", foreignKey = @ForeignKey(name = "fk_tournament_participation_tournament_group"))
     private TournamentGroup tournamentGroup;
-
-    private Integer score;
-
-    private Boolean rewardClaimed;
 
 }

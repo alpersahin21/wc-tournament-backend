@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -42,197 +41,126 @@ public class TournamentServiceImpl implements TournamentService {
     private final TournamentParticipationRepository tournamentParticipationRepository;
     private final UserService userService;
 
-
     @Override
     public GroupLeaderboardResponse addUserToTournament(String userId) {
+        log.info("Adding user to tournament: userId={}", userId);
         Tournament tournament = getCurrentTournamentOrCreateNew();
         User user = userService.retrieveUserById(userId);
-        checkIfUserIsEligible(user);
-        TournamentGroup foundGroup = findGroupForUserOrCreateNew(user, tournament);
-        return generateGroupLeaderboard(foundGroup);
+
+        validateUserEligibility(user);
+
+        TournamentGroup group = assignUserToGroup(user, tournament);
+        return generateGroupLeaderboard(group);
     }
 
-    private TournamentGroup checkIfGroupParticipantsAreMatched(TournamentGroup foundGroup) {
-        if (foundGroup.getParticipantUsers().size() == 5) {
-            foundGroup.setCompeting(true);
-            return tournamentGroupRepository.save(foundGroup);
-        }
-        return foundGroup;
-    }
-
-    private void checkIfUserIsEligible(User user) {
+    private void validateUserEligibility(User user) {
         if (user.getLevel() < 20) {
-            throw new ApiBusinessException("User does not have the level requirement to participate in the tournament");
+            throw new ApiBusinessException("User does not meet the level requirement to participate in the tournament.");
         }
-        else if (user.getCoins() < 1000) {
-            throw new ApiBusinessException("User does not have enough coins to participate in the tournament");
+        if (user.getCoins() < 1000) {
+            throw new ApiBusinessException("User does not have enough coins to participate in the tournament.");
         }
-        List<TournamentParticipation> userParticipation = user.getTournamentParticipation();
-        if (!CollectionUtils.isEmpty(userParticipation)) {
-            userParticipation.forEach(participation -> {
-                if (Boolean.FALSE.equals(participation.getRewardClaimed()))
-                    throw new ApiBusinessException("User haven't claimed the reward from previous tournament");
-            });
+        if (user.getTournamentParticipation().stream().anyMatch(p -> !p.getRewardClaimed())) {
+            throw new ApiBusinessException("User has unclaimed rewards from a previous tournament.");
         }
     }
 
-    private GroupLeaderboardResponse generateGroupLeaderboard(TournamentGroup foundGroup) {
-        List<GroupRankResponse> groupRankResponses = foundGroup.getParticipantUsers().stream()
-                .sorted((pu1, pu2) -> pu2.getScore().compareTo(pu1.getScore()))
-                .map(participantUser -> generateUserGroupRank(participantUser.getUser(), participantUser))
-                .toList();
-        return GroupLeaderboardResponse.builder()
-                .groupRankResponses(groupRankResponses)
-                .build();
+    private TournamentGroup assignUserToGroup(User user, Tournament tournament) {
+        return tournament.getTournamentGroups().stream()
+                .filter(group -> group.getParticipantUsers().stream()
+                        .noneMatch(part -> part.getUser().getCountry().equals(user.getCountry())))
+                .findFirst()
+                .map(group -> addUserToGroup(user, group))
+                .orElseGet(() -> createNewTournamentGroup(user, tournament));
     }
 
-    private TournamentGroup findGroupForUserOrCreateNew(User user, Tournament tournament) {
-        // Retrieve tournament groups
-        List<TournamentGroup> tournamentGroups = tournament.getTournamentGroups();
+    private TournamentGroup addUserToGroup(User user, TournamentGroup group) {
+        TournamentParticipation participation = createParticipation(user, group);
+        group.getParticipantUsers().add(participation);
+        user.getTournamentParticipation().add(participation);
 
-        // Iterate through existing groups to find a suitable group
-        for (TournamentGroup group : tournamentGroups) {
-            // Check if this group has any user from the same country as the given user
-            boolean hasSameCountryUser = group.getParticipantUsers().stream()
-                    .anyMatch(participation -> participation.getUser().getCountry() == user.getCountry());
-
-            // If no user from the same country is found, add the user to this group
-            if (!hasSameCountryUser) {
-                addUserToGroup(user, group);
-                return checkIfGroupParticipantsAreMatched(group);
-            }
+        if (group.getParticipantUsers().size() == 5) {
+            group.setCompeting(true);
         }
+        return tournamentGroupRepository.save(group);
+    }
 
-        // If no suitable group is found, create a new one
-        return createNewTournamentGroup(user, tournament);
+    private TournamentParticipation createParticipation(User user, TournamentGroup group) {
+        TournamentParticipation participation = new TournamentParticipation();
+        TournamentMapper.userToTournamentParticipation(user, participation);
+        participation.setTournamentGroup(group);
+        return participation;
     }
 
     private TournamentGroup createNewTournamentGroup(User user, Tournament tournament) {
-        // Create a new tournament group
-        TournamentGroup newGroup = new TournamentGroup();
-        newGroup.setTournament(tournament);
-        newGroup.setParticipantUsers(new ArrayList<>());
-        newGroup.setCompeting(false);
+        TournamentGroup group = new TournamentGroup();
+        group.setTournament(tournament);
+        group.setParticipantUsers(new ArrayList<>());
+        tournament.getTournamentGroups().add(group);
 
-        // Add the new group to the tournament
-        tournament.getTournamentGroups().add(newGroup);
-
-        // Add the user to this new group
-        addUserToGroup(user, newGroup);
-
-        // Save the tournament group (and cascade to participation)
-        tournamentRepository.save(tournament); // Assuming this cascades to groups and participations
-
-        return newGroup;
+        return addUserToGroup(user, group);
     }
-
-    private void addUserToGroup(User user, TournamentGroup group) {
-        // Create a new tournament participation for the user
-        TournamentParticipation participation = new TournamentParticipation();
-        TournamentMapper.userToTournamentParticipation(user, participation);
-
-        participation.setTournamentGroup(group);
-
-        // Add the participation to the group
-        group.getParticipantUsers().add(participation);
-
-        // Add the participation to the user's participation list
-        user.getTournamentParticipation().add(participation);
-    }
-
 
     @Override
     public UserResponse handleClaimReward(String userId) {
+        log.info("Handling reward claim for user: userId={}", userId);
         User user = userService.retrieveUserById(userId);
-        TournamentParticipation participation = getActiveTournamentParticipation(user);
+        TournamentParticipation participation = getActiveParticipation(user);
+
         participation.setRewardClaimed(true);
-        Integer userRank = findUserRank(participation);
-        User savedUser = userService.updateUserData(user, userRank);
+        Integer userRank = calculateUserRank(participation);
+        userService.updateUserData(user, userRank);
         tournamentParticipationRepository.save(participation);
-        return UserResponse.fromModel(savedUser);
+
+        return UserResponse.fromModel(user);
     }
 
     @Override
     public GroupRankResponse getUserGroupRank(String userId) {
+        log.info("Getting group rank for user: userId={}", userId);
         User user = userService.retrieveUserById(userId);
-        TournamentParticipation participation = getActiveTournamentParticipation(user);
-        return generateUserGroupRank(user, participation);
+        TournamentParticipation participation = getActiveParticipation(user);
+
+        return generateGroupRankResponse(user, participation);
     }
-
-    private TournamentParticipation getActiveTournamentParticipation(User user) {
-        return user.getTournamentParticipation().stream()
-                .filter(participation -> Boolean.FALSE.equals(participation.getRewardClaimed()))
-                .findFirst()
-                .orElseThrow(() -> new ApiBusinessException("User is not participating in any active tournament"));
-    }
-
-    private GroupRankResponse generateUserGroupRank(User user, TournamentParticipation participation) {
-        return GroupRankResponse.builder()
-                .userId(user.getId())
-                .username(user.getUsername())
-                .rank(findUserRank(participation))
-                .build();
-    }
-
-    private Integer findUserRank(TournamentParticipation participation) {
-        // Get the tournament group of the user
-        TournamentGroup group = participation.getTournamentGroup();
-
-        // Get all participation in the group
-        List<TournamentParticipation> allParticipation = group.getParticipantUsers();
-
-        // Sort the participation by score in descending order
-        List<TournamentParticipation> sortedParticipation = allParticipation.stream()
-                .sorted((p1, p2) -> p2.getScore().compareTo(p1.getScore())) // Higher scores first
-                .toList();
-
-        // Find the rank of the given user in the sorted list
-        for (int i = 0; i < sortedParticipation.size(); i++) {
-            if (sortedParticipation.get(i).getUser().getId().equals(participation.getUser().getId())) {
-                return i + 1; // Rank is 1-based
-            }
-        }
-
-        return -1;
-    }
-
 
     @Override
-    public GroupLeaderboardResponse getGroupLeaderboard(String tournamentGroupId) {
-        TournamentGroup group = tournamentGroupRepository.findById(tournamentGroupId)
-                .orElseThrow(() -> new ApiBusinessException("Tournament group not found"));
+    public GroupLeaderboardResponse getGroupLeaderboard(String groupId) {
+        log.info("Fetching group leaderboard: groupId={}", groupId);
+        TournamentGroup group = tournamentGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ApiBusinessException("Tournament group not found."));
         return generateGroupLeaderboard(group);
     }
 
     @Override
     public CountryLeaderboardResponse getCountryLeaderboard() {
-        // Find the active tournament
+        log.info("Fetching country leaderboard.");
         Tournament tournament = tournamentRepository.findByActiveTrue()
-                .orElseThrow(() -> new ApiBusinessException("No active tournament found"));
+                .orElseThrow(() -> new ApiBusinessException("No active tournament found."));
 
-        // Retrieve all tournament groups
-        List<TournamentGroup> tournamentGroups = tournament.getTournamentGroups();
+        Map<Country, Integer> countryScores = calculateCountryScores(tournament.getTournamentGroups());
+        return buildCountryLeaderboardResponse(countryScores);
+    }
 
-        // Map to store country scores
+    private Map<Country, Integer> calculateCountryScores(List<TournamentGroup> groups) {
         Map<Country, Integer> countryScores = new HashMap<>();
-
-        // Calculate total scores for each country
-        for (TournamentGroup group : tournamentGroups) {
+        for (TournamentGroup group : groups) {
             for (TournamentParticipation participation : group.getParticipantUsers()) {
-                Country userCountry = participation.getUser().getCountry();
-                int userScore = participation.getScore();
-
-                countryScores.put(userCountry, countryScores.getOrDefault(userCountry, 0) + userScore);
+                countryScores.merge(
+                        participation.getUser().getCountry(),
+                        participation.getScore(),
+                        Integer::sum
+                );
             }
         }
+        return countryScores;
+    }
 
-        // Sort countries by their scores in descending order
+    private CountryLeaderboardResponse buildCountryLeaderboardResponse(Map<Country, Integer> countryScores) {
         List<Map<Country, Integer>> sortedCountryScores = countryScores.entrySet().stream()
-                .sorted((entry1, entry2) -> entry2.getValue().compareTo(entry1.getValue())) // Sort by scores (highest first)
-                .map(entry -> Map.of(entry.getKey(), entry.getValue())) // Convert to desired map structure
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .map(entry -> Map.of(entry.getKey(), entry.getValue()))
                 .toList();
-
-        // Build and return the response
         return CountryLeaderboardResponse.builder()
                 .countryRanks(sortedCountryScores)
                 .build();
@@ -240,53 +168,85 @@ public class TournamentServiceImpl implements TournamentService {
 
     @Override
     public void updateUserScore(User user) {
-        TournamentParticipation participation = getActiveTournamentParticipation(user);
-        if (Boolean.TRUE.equals(participation.getTournamentGroup().getCompeting()))
+        log.info("Updating score for user: userId={}", user.getId());
+        TournamentParticipation participation = getActiveParticipation(user);
+
+        if (Boolean.TRUE.equals(participation.getTournamentGroup().getCompeting())) {
             participation.setScore(participation.getScore() + 1);
+            tournamentParticipationRepository.save(participation);
+        }
     }
 
     @Scheduled(cron = "0 0 0 * * ?", zone = "UTC")
     @Transactional
     @Override
     public void createNewTournament() {
-        // Check and deactivate any existing tournament
+        log.info("Creating a new tournament.");
         deactivatePreviousTournament();
 
-        // Create a new tournament
         Tournament newTournament = new Tournament();
         newTournament.setStartTime(LocalDateTime.now());
-        newTournament.setEndTime(LocalDateTime.now().plusHours(20)); // Set deadline to 20:00 UTC
+        newTournament.setEndTime(getTodayAt20UTC());
         newTournament.setActive(true);
-
-        // Save the new tournament to the database
         tournamentRepository.save(newTournament);
     }
 
     private void deactivatePreviousTournament() {
-        // Find the active tournament or create one if none exists
-        Tournament activeTournament = getCurrentTournamentOrCreateNew();
-
-        if (Boolean.TRUE.equals(activeTournament.getActive())) {
-            activeTournament.setActive(false);
-            tournamentRepository.save(activeTournament);
-        }
+        tournamentRepository.findByActiveTrue()
+                .ifPresent(tournament -> {
+                    tournament.setActive(false);
+                    tournamentRepository.save(tournament);
+                });
     }
 
     private Tournament getCurrentTournamentOrCreateNew() {
-        return tournamentRepository.findByActiveTrue().orElseGet(() -> {
-            Tournament newTournament = new Tournament();
-            newTournament.setStartTime(LocalDateTime.now());
-            newTournament.setEndTime(getTodayAt20UTC());
-            newTournament.setActive(true);
-            return tournamentRepository.save(newTournament);
-        });
+        return tournamentRepository.findByActiveTrue()
+                .orElseGet(() -> {
+                    Tournament newTournament = new Tournament();
+                    newTournament.setStartTime(LocalDateTime.now());
+                    newTournament.setEndTime(getTodayAt20UTC());
+                    newTournament.setActive(true);
+                    return tournamentRepository.save(newTournament);
+                });
+    }
+
+    private TournamentParticipation getActiveParticipation(User user) {
+        return user.getTournamentParticipation().stream()
+                .filter(part -> !part.getRewardClaimed())
+                .findFirst()
+                .orElseThrow(() -> new ApiBusinessException("User is not participating in any active tournament."));
+    }
+
+    private Integer calculateUserRank(TournamentParticipation participation) {
+        List<TournamentParticipation> sortedParticipants = participation.getTournamentGroup()
+                .getParticipantUsers().stream()
+                .sorted((a, b) -> b.getScore().compareTo(a.getScore()))
+                .toList();
+
+        return sortedParticipants.indexOf(participation) + 1;
+    }
+
+    private GroupLeaderboardResponse generateGroupLeaderboard(TournamentGroup group) {
+        List<GroupRankResponse> groupRanks = group.getParticipantUsers().stream()
+                .sorted((a, b) -> b.getScore().compareTo(a.getScore()))
+                .map(part -> generateGroupRankResponse(part.getUser(), part))
+                .toList();
+
+        return GroupLeaderboardResponse.builder()
+                .groupRankResponses(groupRanks)
+                .build();
+    }
+
+    private GroupRankResponse generateGroupRankResponse(User user, TournamentParticipation participation) {
+        return GroupRankResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .rank(calculateUserRank(participation))
+                .build();
     }
 
     private LocalDateTime getTodayAt20UTC() {
-        // Get current date and set the time to 20:00 UTC
         return LocalDate.now().atTime(20, 0).atZone(ZoneId.of("UTC")).toLocalDateTime();
     }
-
-
-
 }
+

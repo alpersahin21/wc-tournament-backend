@@ -22,40 +22,41 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User createUser(CreateUserRequest requestDTO) {
-        log.info("UserService -> createUser started");
+        log.info("Creating user with username: {}", requestDTO.getUsername());
         User user = new User();
         UserMapper.dtoToUser(user, requestDTO);
-        User savedEntity = userRepository.save(user);
-        log.info("UserService -> createUser completed!");
-        return savedEntity;
+        return userRepository.save(user);
     }
 
     @Override
     public User updateLevel(String id) {
-        log.info("UserService -> updateLevel started: userId={}", id);
         User user = retrieveUserById(id);
         user.setLevel(user.getLevel() + 1);
         user.setCoins(user.getCoins() + 25);
         tournamentService.updateUserScore(user);
-        User savedEntity = userRepository.save(user);
-        log.info("UserService -> updateLevel completed!");
-        return savedEntity;
+        return userRepository.save(user);
     }
 
     @Override
     public User retrieveUserById(String id) {
-        log.info("UserService -> retrieveUserById started: userId={}", id);
-        if (Boolean.TRUE.equals(StringUtils.isEmpty(id))) throw new ApiBusinessException("userId is a required field.");
-        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        validateId(id);
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ApiBusinessException("User not found with ID: " + id));
     }
 
     @Override
     public User updateUserData(User user, Integer userRank) {
-        if (userRank == 1)
-            user.setCoins(user.getCoins() + 10000);
-        else if (userRank == 2)
-            user.setCoins(user.getCoins() + 5000);
+        int rewardCoins = switch (userRank) {
+            case 1 -> 10000;
+            case 2 -> 5000;
+            default -> 0;
+        };
+        user.setCoins(user.getCoins() + rewardCoins);
         return userRepository.save(user);
     }
 
+    private void validateId(String id) {
+        if (Boolean.TRUE.equals(StringUtils.isEmpty(id))) throw new ApiBusinessException("User ID is required.");
+    }
 }
+

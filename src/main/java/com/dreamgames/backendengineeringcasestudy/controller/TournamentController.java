@@ -6,6 +6,7 @@ import com.dreamgames.backendengineeringcasestudy.model.response.GroupRankRespon
 import com.dreamgames.backendengineeringcasestudy.model.response.UserResponse;
 import com.dreamgames.backendengineeringcasestudy.service.TournamentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,28 +17,28 @@ public class TournamentController {
     private final TournamentService tournamentService;
 
     @PostMapping("/enter/{userId}")
-    public GroupLeaderboardResponse enterTournament(@PathVariable String userId) {
-        return tournamentService.addUserToTournament(userId);
+    public ResponseEntity<GroupLeaderboardResponse> enterTournament(@PathVariable String userId) {
+        return ResponseEntity.ok(tournamentService.addUserToTournament(userId));
     }
 
     @PostMapping("/claim/{userId}")
-    public UserResponse claimTournamentRewards(@PathVariable String userId) {
-        return tournamentService.handleClaimReward(userId);
+    public ResponseEntity<UserResponse> claimTournamentRewards(@PathVariable String userId) {
+        return ResponseEntity.ok(tournamentService.handleClaimReward(userId));
     }
 
     @GetMapping("/rank/{userId}")
-    public GroupRankResponse getGroupRank(@PathVariable String userId) {
-        return tournamentService.getUserGroupRank(userId);
+    public ResponseEntity<GroupRankResponse> getGroupRank(@PathVariable String userId) {
+        return ResponseEntity.ok(tournamentService.getUserGroupRank(userId));
     }
 
     @GetMapping("/leaderboard/group/{groupId}")
-    public GroupLeaderboardResponse getGroupLeaderboard(@PathVariable String groupId) {
-        return tournamentService.getGroupLeaderboard(groupId);
+    public ResponseEntity<GroupLeaderboardResponse> getGroupLeaderboard(@PathVariable String groupId) {
+        return ResponseEntity.ok(tournamentService.getGroupLeaderboard(groupId));
     }
 
     @GetMapping("/leaderboard/country")
-    public CountryLeaderboardResponse getCountryLeaderboard() {
-        return tournamentService.getCountryLeaderboard();
+    public ResponseEntity<CountryLeaderboardResponse> getCountryLeaderboard() {
+        return ResponseEntity.ok(tournamentService.getCountryLeaderboard());
     }
-
 }
+

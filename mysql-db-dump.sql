@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS tournament_participation (
         id CHAR(36) NOT NULL PRIMARY KEY,
         score INT NOT NULL,
         reward_claimed BOOLEAN NOT NULL,
-        tournament_group_id CHAR(36) NOT NULL,
         user_id CHAR(36) NOT NULL,
+        tournament_group_id CHAR(36) NOT NULL,
         CONSTRAINT fk_tournament_participation_user FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
         CONSTRAINT fk_tournament_participation_tournament_group FOREIGN KEY (tournament_group_id) REFERENCES tournament_group(id) ON DELETE CASCADE
 );
